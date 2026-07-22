@@ -37,6 +37,7 @@ struct OverviewMenuCardRowView: View {
                 UsageMenuCardUsageSectionView(
                     model: self.model,
                     showBottomDivider: false,
+                    showInlineUsageDashboard: self.showInlineUsageDashboard,
                     bottomPadding: 6,
                     width: self.width)
             }
@@ -61,7 +62,11 @@ struct OverviewMenuCardRowView: View {
     }
 
     private var hasUsageBlock: Bool {
-        self.model.hasUsageContent
+        self.model.hasUsageContent(showInlineUsageDashboard: self.showInlineUsageDashboard)
+    }
+
+    private var showInlineUsageDashboard: Bool {
+        !AIQuotaProduct.isActive || AIQuotaProduct.showsOverviewInlineUsageDashboard(for: self.model.provider)
     }
 }
 

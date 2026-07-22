@@ -39,6 +39,7 @@ struct UsageProgressBar: View {
     let paceOnTop: Bool
     let warningMarkerPercents: [Double]
     let workdayMarkerPercents: [Double]
+    let warningMarkerColors: [Color]
     @Environment(\.menuItemHighlighted) private var isHighlighted
     @Environment(\.displayScale) private var displayScale
 
@@ -49,7 +50,8 @@ struct UsageProgressBar: View {
         pacePercent: Double? = nil,
         paceOnTop: Bool = true,
         warningMarkerPercents: [Double] = [],
-        workdayMarkerPercents: [Double] = [])
+        workdayMarkerPercents: [Double] = [],
+        warningMarkerColors: [Color] = [])
     {
         self.percent = percent
         self.tint = tint
@@ -58,6 +60,7 @@ struct UsageProgressBar: View {
         self.paceOnTop = paceOnTop
         self.warningMarkerPercents = warningMarkerPercents
         self.workdayMarkerPercents = workdayMarkerPercents
+        self.warningMarkerColors = warningMarkerColors
     }
 
     private var clamped: Double {
@@ -101,6 +104,7 @@ struct UsageProgressBar: View {
                     with: .color(MenuHighlightStyle.progressTint(self.isHighlighted, fallback: self.tint)))
             }
 
+            var warningMarkerIndex = 0
             for marker in markers {
                 let x = size.width * marker.percent / 100
                 switch marker.kind {
@@ -120,7 +124,11 @@ struct UsageProgressBar: View {
                     context.blendMode = .normal
                     context.fill(
                         markerStripePath,
-                        with: .color(Self.warningMarkerColor(isHighlighted: self.isHighlighted)))
+                        with: .color(Self.warningMarkerColor(
+                            isHighlighted: self.isHighlighted,
+                            customColors: self.warningMarkerColors,
+                            index: warningMarkerIndex)))
+                    warningMarkerIndex += 1
                 case .workdayBoundary:
                     let markerRect = Self.workdayMarkerRect(x: x, size: size, scale: scale)
                     context.fill(
@@ -309,6 +317,17 @@ struct UsageProgressBar: View {
 
     nonisolated static func warningMarkerColor(isHighlighted: Bool) -> Color {
         isHighlighted ? .white.opacity(0.96) : .primary.opacity(0.68)
+    }
+
+    private nonisolated static func warningMarkerColor(
+        isHighlighted: Bool,
+        customColors: [Color],
+        index: Int) -> Color
+    {
+        guard !isHighlighted, !customColors.isEmpty else {
+            return self.warningMarkerColor(isHighlighted: isHighlighted)
+        }
+        return customColors[index % customColors.count]
     }
 
     nonisolated static func workdayMarkerColor(isHighlighted: Bool) -> Color {

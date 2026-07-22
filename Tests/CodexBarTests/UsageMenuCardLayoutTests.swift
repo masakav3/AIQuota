@@ -85,11 +85,31 @@ struct UsageMenuCardLayoutTests {
             UsageMenuCardLayout.sectionBottomPadding)
     }
 
+    @Test
+    func `hiding overview dashboard leaves detail dashboard data intact`() {
+        let dashboard = InlineUsageDashboardModel(
+            accessibilityLabel: "Token history",
+            valueStyle: .tokens,
+            kpis: [],
+            points: [
+                .init(id: "today", label: "Today", value: 100, accessibilityValue: "Today: 100 tokens"),
+            ],
+            detailLines: [],
+            barColor: .blue,
+            currencyCode: nil)
+        let model = Self.model(inlineUsageDashboard: dashboard)
+
+        #expect(model.hasUsageContent)
+        #expect(!model.hasUsageContent(showInlineUsageDashboard: false))
+        #expect(model.inlineUsageDashboard == dashboard)
+    }
+
     private static func model(
         metrics: [UsageMenuCardView.Model.Metric] = [],
         usageNotes: [String] = [],
         creditsText: String? = nil,
-        placeholder: String? = nil) -> UsageMenuCardView.Model
+        placeholder: String? = nil,
+        inlineUsageDashboard: InlineUsageDashboardModel? = nil) -> UsageMenuCardView.Model
     {
         UsageMenuCardView.Model(
             provider: .codex,
@@ -101,7 +121,7 @@ struct UsageMenuCardLayoutTests {
             metrics: metrics,
             usageNotes: usageNotes,
             openAIAPIUsage: nil,
-            inlineUsageDashboard: nil,
+            inlineUsageDashboard: inlineUsageDashboard,
             creditsText: creditsText,
             creditsRemaining: nil,
             creditsProgressPercent: nil,

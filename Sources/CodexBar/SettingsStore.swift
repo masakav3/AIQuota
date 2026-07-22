@@ -210,6 +210,8 @@ final class SettingsStore {
 
     @ObservationIgnored let userDefaults: UserDefaults
     @ObservationIgnored let configStore: CodexBarConfigStore
+    @ObservationIgnored let aiQuotaCredentialStore: any AIQuotaCredentialStoring
+    @ObservationIgnored let aiQuotaProductActive: Bool
     @ObservationIgnored let antigravityOAuthCredentialsStore: AntigravityOAuthCredentialsStore
     @ObservationIgnored var config: CodexBarConfig
     @ObservationIgnored var configPersistTask: Task<Void, Never>?
@@ -281,6 +283,8 @@ final class SettingsStore {
         copilotTokenStore: any CopilotTokenStoring = KeychainCopilotTokenStore(),
         tokenAccountStore: any ProviderTokenAccountStoring = FileTokenAccountStore(),
         antigravityOAuthCredentialsStore: AntigravityOAuthCredentialsStore = AntigravityOAuthCredentialsStore(),
+        aiQuotaCredentialStore: any AIQuotaCredentialStoring = KeychainAIQuotaCredentialStore(),
+        aiQuotaProductActive: Bool = AIQuotaProduct.isActive,
         performInitialProviderDetection: Bool = !SettingsStore.isRunningTests)
     {
         // Capture this before app-group/config migrations can create prior-installation state.
@@ -328,12 +332,22 @@ final class SettingsStore {
             ampCookieStore: ampCookieStore,
             copilotTokenStore: copilotTokenStore,
             tokenAccountStore: tokenAccountStore)
-        let config = CodexBarConfigMigrator.loadOrMigrate(
+        let loadedConfig = CodexBarConfigMigrator.loadOrMigrate(
             configStore: configStore,
             userDefaults: userDefaults,
             stores: legacyStores)
+        let config = if aiQuotaProductActive {
+            AIQuotaCredentialMigration.migrate(
+                config: loadedConfig,
+                credentialStore: aiQuotaCredentialStore,
+                save: configStore.save)
+        } else {
+            loadedConfig
+        }
         self.userDefaults = userDefaults
         self.configStore = configStore
+        self.aiQuotaCredentialStore = aiQuotaCredentialStore
+        self.aiQuotaProductActive = aiQuotaProductActive
         self.antigravityOAuthCredentialsStore = antigravityOAuthCredentialsStore
         self.config = config
         self.configLoading = true
@@ -867,6 +881,12 @@ extension SettingsStore {
         self.providerConfigRevisions[provider, default: 0]
     }
 
+    func noteAIQuotaCredentialChanged(provider: UsageProvider) {
+        self.providerConfigRevisions[provider, default: 0] &+= 1
+        self.configRevision &+= 1
+        self.noteBackgroundWorkSettingsChanged()
+    }
+
     func orderedProviders() -> [UsageProvider] {
         if self.providerOrder.isEmpty {
             self.updateProviderState(config: self.configSnapshot)
@@ -881,23 +901,32 @@ extension SettingsStore {
     }
 
     func isProviderEnabled(provider: UsageProvider, metadata: ProviderMetadata) -> Bool {
-        self.providerEnablement[provider] ?? metadata.defaultEnabled
+        guard !self.aiQuotaProductActive || AIQuotaProduct.includes(provider) else { return false }
+        guard self.canEnableAIQuotaProvider(provider) else { return false }
+        return self.providerEnablement[provider] ?? metadata.defaultEnabled
     }
 
     func isProviderEnabledCached(
         provider: UsageProvider,
         metadataByProvider: [UsageProvider: ProviderMetadata]) -> Bool
     {
+        guard !self.aiQuotaProductActive || AIQuotaProduct.includes(provider) else { return false }
+        guard self.canEnableAIQuotaProvider(provider) else { return false }
         let defaultEnabled = metadataByProvider[provider]?.defaultEnabled ?? false
         return self.providerEnablement[provider] ?? defaultEnabled
     }
 
     func enabledProvidersOrdered(metadataByProvider: [UsageProvider: ProviderMetadata]) -> [UsageProvider] {
         _ = metadataByProvider
-        return self.orderedProviders().filter { self.providerEnablement[$0] ?? false }
+        return self.orderedProviders().filter {
+            (!self.aiQuotaProductActive || AIQuotaProduct.includes($0)) &&
+                self.canEnableAIQuotaProvider($0) &&
+                (self.providerEnablement[$0] ?? false)
+        }
     }
 
     func setProviderEnabled(provider: UsageProvider, metadata _: ProviderMetadata, enabled: Bool) {
+        guard !enabled || self.canEnableAIQuotaProvider(provider) else { return }
         CodexBarLog.logger(LogCategories.settings).debug(
             "Provider toggle updated",
             metadata: ["provider": provider.rawValue, "enabled": "\(enabled)"])

@@ -16,6 +16,7 @@ struct ProviderIconResourcesTests {
             "claude",
             "clinepass",
             "zai",
+            "glm",
             "minimax",
             "cursor",
             "opencode",

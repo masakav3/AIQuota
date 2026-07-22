@@ -5,6 +5,135 @@ import Testing
 
 extension StatusMenuTests {
     @Test
+    func `GLM overview row opens hourly token chart instead of MCP model list`() throws {
+        self.disableMenuCardsForTesting()
+        let settings = self.makeSettings()
+        settings.statusChecksEnabled = false
+        settings.refreshFrequency = .manual
+
+        let fetcher = UsageFetcher()
+        let store = UsageStore(fetcher: fetcher, browserDetection: BrowserDetection(cacheTTL: 0), settings: settings)
+        let now = Date()
+        let hourFormatter = DateFormatter()
+        hourFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+        hourFormatter.locale = Locale(identifier: "en_US_POSIX")
+        let usage = ZaiUsageSnapshot(
+            tokenLimit: nil,
+            timeLimit: ZaiLimitEntry(
+                type: .timeLimit,
+                unit: .minutes,
+                number: 1,
+                usage: 100,
+                currentValue: 50,
+                remaining: 50,
+                percentage: 50,
+                usageDetails: [ZaiUsageDetail(modelCode: "glm-4.5", usage: 512)],
+                nextResetTime: now.addingTimeInterval(3600)),
+            planName: "Pro",
+            modelUsage: ZaiModelUsageData(
+                xTime: [hourFormatter.string(from: now)],
+                modelDataList: [ZaiModelDataItem(modelName: "glm-4.5", tokensUsage: [512])]),
+            updatedAt: now)
+        store._setSnapshotForTesting(usage.toUsageSnapshot(), provider: .zai)
+
+        let controller = StatusItemController(
+            store: store,
+            settings: settings,
+            account: fetcher.loadAccountInfo(),
+            updater: DisabledUpdaterController(),
+            preferencesSelection: PreferencesSelection(),
+            statusBar: self.makeStatusBarForTesting())
+        defer { controller.releaseStatusItemsForTesting() }
+
+        let model = try #require(controller.menuCardModel(for: .zai))
+        #expect(model.inlineUsageDashboard?.kpis.map(\.title) == [
+            "24h tokens",
+            "Latest hour",
+            "Peak hour",
+            "Models",
+        ])
+        #expect(!AIQuotaProduct.showsOverviewInlineUsageDashboard(for: .zai))
+        let submenu = try #require(controller.makeOverviewRowSubmenu(provider: .zai, model: model, width: 320))
+
+        #expect(submenu.items.first?.representedObject as? String == StatusItemController.zaiHourlyUsageChartID)
+        #expect(submenu.items.contains { $0.title == "MCP details" } == false)
+    }
+
+    @Test
+    func `MiniMax overview row exposes billing detail chart submenu`() throws {
+        self.disableMenuCardsForTesting()
+        let settings = self.makeSettings()
+        settings.statusChecksEnabled = false
+        settings.refreshFrequency = .manual
+        settings.showOptionalCreditsAndExtraUsage = true
+
+        let fetcher = UsageFetcher()
+        let store = UsageStore(fetcher: fetcher, browserDetection: BrowserDetection(cacheTTL: 0), settings: settings)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let billing = MiniMaxBillingSummary(
+            todayTokens: 1234,
+            last30DaysTokens: 5678,
+            todayCash: 1.5,
+            last30DaysCash: 4.25,
+            daily: [MiniMaxBillingDay(day: "2023-11-14", tokens: 1234, cash: 1.5)],
+            topMethods: [],
+            topModels: [MiniMaxBillingBreakdown(name: "MiniMax-M1", tokens: 1234, cash: 1.5)],
+            updatedAt: now)
+        let usage = MiniMaxUsageSnapshot(
+            planName: "Max",
+            availablePrompts: 8,
+            currentPrompts: 2,
+            remainingPrompts: 8,
+            windowMinutes: 300,
+            usedPercent: 20,
+            resetsAt: now.addingTimeInterval(3600),
+            updatedAt: now,
+            billingSummary: billing)
+        store._setSnapshotForTesting(usage.toUsageSnapshot(), provider: .minimax)
+
+        let controller = StatusItemController(
+            store: store,
+            settings: settings,
+            account: fetcher.loadAccountInfo(),
+            updater: DisabledUpdaterController(),
+            preferencesSelection: PreferencesSelection(),
+            statusBar: self.makeStatusBarForTesting())
+        defer { controller.releaseStatusItemsForTesting() }
+
+        let model = try #require(controller.menuCardModel(for: .minimax))
+        let submenu = try #require(controller.makeOverviewRowSubmenu(provider: .minimax, model: model, width: 320))
+
+        #expect(submenu.items.first?.representedObject as? String == StatusItemController.miniMaxUsageChartID)
+    }
+
+    @Test
+    func `Kimi overview row exposes local activity only in its detail submenu`() throws {
+        self.disableMenuCardsForTesting()
+        let settings = self.makeSettings()
+        settings.statusChecksEnabled = false
+        settings.refreshFrequency = .manual
+
+        let fetcher = UsageFetcher()
+        let store = UsageStore(fetcher: fetcher, browserDetection: BrowserDetection(cacheTTL: 0), settings: settings)
+        store._setKimiCodeLocalUsageForTesting(Self.kimiCodeLocalUsageSnapshot())
+        let controller = StatusItemController(
+            store: store,
+            settings: settings,
+            account: fetcher.loadAccountInfo(),
+            updater: DisabledUpdaterController(),
+            preferencesSelection: PreferencesSelection(),
+            statusBar: self.makeStatusBarForTesting())
+        defer { controller.releaseStatusItemsForTesting() }
+
+        let model = try #require(controller.menuCardModel(for: .kimi))
+        #expect(model.inlineUsageDashboard != nil)
+        #expect(!AIQuotaProduct.showsOverviewInlineUsageDashboard(for: .kimi))
+        let submenu = try #require(controller.makeOverviewRowSubmenu(provider: .kimi, model: model, width: 320))
+
+        #expect(submenu.items.first?.representedObject as? String == StatusItemController.kimiCodeUsageChartID)
+    }
+
+    @Test
     func `overview rows expose provider detail submenus`() throws {
         self.disableMenuCardsForTesting()
         let settings = self.makeSettings()
@@ -166,6 +295,9 @@ extension StatusMenuTests {
                 usageDetails: [ZaiUsageDetail(modelCode: "glm-4.5", usage: 512)],
                 nextResetTime: now.addingTimeInterval(3600)),
             planName: "Pro",
+            modelUsage: ZaiModelUsageData(
+                xTime: ["2023-11-14 12:00"],
+                modelDataList: [ZaiModelDataItem(modelName: "glm-4.5", tokensUsage: [512])]),
             updatedAt: now)
         store._setSnapshotForTesting(usage.toUsageSnapshot(), provider: .zai)
 
@@ -338,5 +470,22 @@ extension StatusMenuTests {
         #expect(representedIDs.contains("menuCard"))
         #expect(representedIDs.contains(where: { $0.hasPrefix("overviewRow-") }) == false)
         #expect(switcherButtons.first(where: { $0.state == .on })?.tag == 2)
+    }
+}
+
+extension StatusMenuTests {
+    fileprivate static func kimiCodeLocalUsageSnapshot() -> KimiCodeLocalUsageSnapshot {
+        KimiCodeLocalUsageSnapshot(
+            daily: [
+                .init(
+                    day: "2026-07-22",
+                    requests: 2,
+                    inputOtherTokens: 100,
+                    outputTokens: 20,
+                    cacheReadTokens: 30,
+                    cacheCreationTokens: 10,
+                    modelRequests: ["kimi-code/k3": 2]),
+            ],
+            updatedAt: Date(timeIntervalSince1970: 1_700_000_000))
     }
 }

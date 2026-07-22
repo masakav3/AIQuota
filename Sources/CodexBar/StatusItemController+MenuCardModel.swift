@@ -138,6 +138,7 @@ extension StatusItemController {
             provider: target,
             metadata: metadata,
             snapshot: snapshot,
+            kimiCodeLocalUsage: self.kimiCodeLocalUsage(for: target, usesOverrideCard: usesOverrideCard),
             codexProjection: codexProjection,
             credits: credits,
             creditsError: creditsError,
@@ -202,6 +203,13 @@ extension StatusItemController {
         }
         guard let snapshot else { return .unavailable }
         return self.store.planUtilizationHistorySelection(for: provider, snapshotOverride: snapshot)
+    }
+
+    private func kimiCodeLocalUsage(
+        for provider: UsageProvider,
+        usesOverrideCard: Bool) -> KimiCodeLocalUsageSnapshot?
+    {
+        !usesOverrideCard && provider == .kimi ? self.store.kimiCodeLocalUsage : nil
     }
 
     func accountInfo(for account: CodexVisibleAccount) -> AccountInfo {

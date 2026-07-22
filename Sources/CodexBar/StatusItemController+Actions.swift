@@ -544,8 +544,8 @@ extension StatusItemController: StatusItemMenuPersistentActionDelegate {
         self.openSettings(pane: nil)
     }
 
-    @objc func showSettingsAbout() {
-        self.openSettings(pane: .about)
+    @objc func showAboutPanel() {
+        showAbout()
     }
 
     func openMenuFromShortcut() {

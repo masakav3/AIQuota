@@ -193,7 +193,10 @@ struct UsageMenuCardView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     if hasUsage {
-                        UsageMenuCardUsageContentView(model: liveModel, showBottomDivider: false)
+                        UsageMenuCardUsageContentView(
+                            model: liveModel,
+                            showBottomDivider: false,
+                            showInlineUsageDashboard: true)
                     }
                     if hasUsage, hasCredits || hasCost {
                         Divider()
@@ -500,6 +503,7 @@ private struct MetricRow: View {
     let metric: UsageMenuCardView.Model.Metric
     let title: String
     let progressColor: Color
+    let warningMarkerColors: [Color]
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
@@ -520,7 +524,8 @@ private struct MetricRow: View {
                     pacePercent: self.metric.pacePercent,
                     paceOnTop: self.metric.paceOnTop,
                     warningMarkerPercents: self.metric.warningMarkerPercents,
-                    workdayMarkerPercents: self.metric.workdayMarkerPercents)
+                    workdayMarkerPercents: self.metric.workdayMarkerPercents,
+                    warningMarkerColors: self.warningMarkerColors)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(self.metric.percentLabel)
@@ -630,6 +635,7 @@ struct UsageMenuCardHeaderSectionView: View {
 private struct UsageMenuCardUsageContentView: View {
     let model: UsageMenuCardView.Model
     let showBottomDivider: Bool
+    let showInlineUsageDashboard: Bool
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     /// Doubao ships Coding Plan and Agent Plan subscriptions, each with personal
@@ -658,7 +664,8 @@ private struct UsageMenuCardUsageContentView: View {
             MetricRow(
                 metric: metric,
                 title: UsageMenuCardView.popupMetricTitle(provider: self.model.provider, metric: metric),
-                progressColor: self.model.progressColor)
+                progressColor: self.model.progressColor,
+                warningMarkerColors: self.model.warningMarkerColors)
         }
     }
 
@@ -683,7 +690,7 @@ private struct UsageMenuCardUsageContentView: View {
                 }
                 CodexResetCreditsContent(presentation: resetCredits)
             }
-            if let dashboard = self.model.inlineUsageDashboard {
+            if self.showInlineUsageDashboard, let dashboard = self.model.inlineUsageDashboard {
                 InlineUsageDashboardContent(model: dashboard)
             } else if !self.model.usageNotes.isEmpty {
                 UsageNotesContent(notes: self.model.usageNotes)
@@ -704,13 +711,17 @@ private struct UsageMenuCardUsageContentView: View {
 struct UsageMenuCardUsageSectionView: View {
     let model: UsageMenuCardView.Model
     let showBottomDivider: Bool
+    var showInlineUsageDashboard = true
     let bottomPadding: CGFloat
     let width: CGFloat
     @Environment(\.menuCardRefreshMonitor) private var refreshMonitor
 
     var body: some View {
         let liveModel = self.liveModel
-        UsageMenuCardUsageContentView(model: liveModel, showBottomDivider: self.showBottomDivider)
+        UsageMenuCardUsageContentView(
+            model: liveModel,
+            showBottomDivider: self.showBottomDivider,
+            showInlineUsageDashboard: self.showInlineUsageDashboard)
             .padding(.horizontal, UsageMenuCardLayout.horizontalPadding)
             .padding(.top, UsageMenuCardLayout.usageSectionTopPadding)
             .padding(.bottom, self.bottomPadding)
@@ -957,7 +968,9 @@ extension UsageMenuCardView.Model {
 
         return UsageMenuCardView.Model(
             provider: input.provider,
-            providerName: input.metadata.displayName,
+            providerName: AIQuotaProduct.isActive
+                ? AIQuotaProduct.displayName(for: input.provider)
+                : input.metadata.displayName,
             email: redacted.email,
             subtitleText: redacted.subtitleText,
             subtitleStyle: subtitle.style,

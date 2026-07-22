@@ -305,6 +305,14 @@ struct StatusMenuHostedSubmenuRefreshTests {
             chartID: StatusItemController.zaiHourlyUsageChartID,
             provider: .zai,
             seed: Self.seedZaiHourlyUsage)
+        try self.assertHostedSubmenuPreservesIdentity(
+            chartID: StatusItemController.miniMaxUsageChartID,
+            provider: .minimax,
+            seed: Self.seedMiniMaxBillingUsage)
+        try self.assertHostedSubmenuPreservesIdentity(
+            chartID: StatusItemController.kimiCodeUsageChartID,
+            provider: .kimi,
+            seed: Self.seedKimiCodeLocalUsage)
     }
 
     @Test
@@ -653,6 +661,45 @@ struct StatusMenuHostedSubmenuRefreshTests {
                 accountOrganization: nil,
                 loginMethod: "OAuth"))
         store._setSnapshotForTesting(snapshot, provider: .zai)
+    }
+
+    private static func seedMiniMaxBillingUsage(in store: UsageStore) {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let billing = MiniMaxBillingSummary(
+            todayTokens: 1234,
+            last30DaysTokens: 5678,
+            todayCash: 1.5,
+            last30DaysCash: 4.25,
+            daily: [MiniMaxBillingDay(day: "2023-11-14", tokens: 1234, cash: 1.5)],
+            topMethods: [MiniMaxBillingBreakdown(name: "chat", tokens: 1234, cash: 1.5)],
+            topModels: [MiniMaxBillingBreakdown(name: "MiniMax-M1", tokens: 1234, cash: 1.5)],
+            updatedAt: now)
+        let usage = MiniMaxUsageSnapshot(
+            planName: "Max",
+            availablePrompts: 8,
+            currentPrompts: 2,
+            remainingPrompts: 8,
+            windowMinutes: 300,
+            usedPercent: 20,
+            resetsAt: now.addingTimeInterval(3600),
+            updatedAt: now,
+            billingSummary: billing)
+        store._setSnapshotForTesting(usage.toUsageSnapshot(), provider: .minimax)
+    }
+
+    private static func seedKimiCodeLocalUsage(in store: UsageStore) {
+        store._setKimiCodeLocalUsageForTesting(KimiCodeLocalUsageSnapshot(
+            daily: [
+                .init(
+                    day: "2026-07-22",
+                    requests: 2,
+                    inputOtherTokens: 100,
+                    outputTokens: 20,
+                    cacheReadTokens: 30,
+                    cacheCreationTokens: 10,
+                    modelRequests: ["kimi-code/k3": 2]),
+            ],
+            updatedAt: Date(timeIntervalSince1970: 1_700_000_000)))
     }
 
     private static func makeTokenSnapshot(

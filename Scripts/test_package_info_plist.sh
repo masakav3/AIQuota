@@ -19,6 +19,7 @@ PY
 
 APP="$TEMP_DIR/CodexBar.app"
 mkdir -p "$APP/Contents"
+APP_NAME="AI Quota"
 BUNDLE_ID=com.steipete.codexbar.test
 MARKETING_VERSION=0.0.0
 BUILD_NUMBER=0
@@ -40,8 +41,8 @@ from pathlib import Path
 plist = plistlib.loads(Path(sys.argv[1]).read_bytes())
 declarations = plist.get("UTExportedTypeDeclarations")
 assert declarations == [{
-    "UTTypeIdentifier": "com.steipete.codexbar.menu-layout-item",
-    "UTTypeDescription": "CodexBar menu bar layout token",
+    "UTTypeIdentifier": "com.matype.aiquota.menu-layout-item",
+    "UTTypeDescription": "AI Quota menu bar layout token",
     "UTTypeConformsTo": ["public.data"],
     "UTTypeTagSpecification": {},
 }]

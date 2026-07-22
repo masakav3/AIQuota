@@ -248,6 +248,9 @@ extension StatusItemController {
         let snapshot = self.store.snapshot(for: primaryProvider)
         let warningFlash = self.quotaWarningFlashActive(provider: primaryProvider)
 
+        if AIQuotaProduct.isActive { return self.applyAIQuotaStatusTitle(
+            provider: primaryProvider, snapshot: snapshot, to: button) }
+
         if let layoutResult = self.applyStoredUnifiedMenuBarLayoutIfNeeded(
             provider: primaryProvider,
             snapshot: snapshot,
@@ -1353,6 +1356,14 @@ extension StatusItemController {
     }
 
     func primaryProviderForUnifiedIcon() -> UsageProvider {
+        if AIQuotaProduct.isActive, self.shouldMergeIcons {
+            let providers = AIQuotaProduct.orderedEnabledProviders(
+                self.store.enabledProvidersForDisplay())
+            self.aiQuotaRotation.updateProviders(providers)
+            if let current = self.aiQuotaRotation.current {
+                return current
+            }
+        }
         // When "show highest usage" is enabled, rank the existing Overview subset by proximity to its limit.
         if self.settings.menuBarShowsHighestUsage, self.shouldMergeIcons {
             let activeProviders = self.store.enabledProvidersForDisplay()

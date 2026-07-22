@@ -19,13 +19,19 @@ const providerIDs = [...providerEnumBody.matchAll(/^\s*case\s+(\w+)\s*$/gm)].map
 assert(providerIDs.length > 0, "UsageProvider must define at least one provider");
 assertEqual(new Set(providerIDs).size, providerIDs.length, "UsageProvider IDs");
 const providerCount = providerIDs.length;
+const readme = fs.readFileSync(path.join(repoRoot, "README.md"), "utf8");
 
 const publicCountFiles = [
-  ["README.md", `alt="CodexBar — every AI coding limit in your menu bar. ${providerCount} providers."`],
   ["docs/providers.md", `CodexBar currently registers ${providerCount} provider IDs.`],
   ["docs/social.html", `<strong>${providerCount} providers</strong>`],
   ["docs/llms.txt", `across ${providerCount} providers`],
 ];
+if (!readme.startsWith("# AI Quota")) {
+  publicCountFiles.unshift([
+    "README.md",
+    `alt="CodexBar — every AI coding limit in your menu bar. ${providerCount} providers."`,
+  ]);
+}
 for (const [relativePath, expectedText] of publicCountFiles) {
   const contents = fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
   assert(contents.includes(expectedText), `${relativePath} must advertise ${providerCount} providers`);

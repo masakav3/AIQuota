@@ -87,7 +87,7 @@ struct ProviderStatusComponent: Identifiable, Equatable {
     }
 }
 
-/// Tracks consecutive failures so we can ignore a single flake when we previously had fresh data.
+/// Tracks consecutive failures so prior data remains trusted until the third failed refresh.
 struct ConsecutiveFailureGate {
     private(set) var streak: Int = 0
 
@@ -102,7 +102,7 @@ struct ConsecutiveFailureGate {
     /// Returns true when the caller should surface the error to the UI.
     mutating func shouldSurfaceError(onFailureWithPriorData hadPriorData: Bool) -> Bool {
         self.streak += 1
-        if hadPriorData, self.streak == 1 {
+        if hadPriorData, self.streak < 3 {
             return false
         }
         return true
@@ -111,6 +111,10 @@ struct ConsecutiveFailureGate {
 
 #if DEBUG
 extension UsageStore {
+    func _setKimiCodeLocalUsageForTesting(_ snapshot: KimiCodeLocalUsageSnapshot?) {
+        self.kimiCodeLocalUsage = snapshot
+    }
+
     func _setSnapshotForTesting(_ snapshot: UsageSnapshot?, provider: UsageProvider) {
         self.snapshots[provider] = snapshot?.scoped(to: provider)
     }

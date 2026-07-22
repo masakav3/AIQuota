@@ -15,8 +15,21 @@ extension SettingsStore {
     }
 
     var zaiAPIToken: String {
-        get { self.configSnapshot.providerConfig(for: .zai)?.sanitizedAPIKey ?? "" }
+        get {
+            if self.aiQuotaProductActive {
+                return self.aiQuotaCredential(for: .glmAPIKey)
+            }
+            return self.configSnapshot.providerConfig(for: .zai)?.sanitizedAPIKey ?? ""
+        }
         set {
+            if self.aiQuotaProductActive {
+                self.storeAIQuotaCredentialFromSetting(
+                    newValue,
+                    kind: .glmAPIKey,
+                    provider: .zai,
+                    field: "apiKey")
+                return
+            }
             self.updateProviderConfig(provider: .zai) { entry in
                 entry.apiKey = self.normalizedConfigValue(newValue)
             }

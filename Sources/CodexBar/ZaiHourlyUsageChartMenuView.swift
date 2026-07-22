@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 struct ZaiHourlyUsageChartMenuView: View {
     private let modelUsage: ZaiModelUsageData
+    private let dashboard: InlineUsageDashboardModel?
     private let width: CGFloat
 
     @State private var selectedRange: RangeOption = .today
@@ -28,8 +29,9 @@ struct ZaiHourlyUsageChartMenuView: View {
         Color(red: 255 / 255, green: 55 / 255, blue: 95 / 255),
     ]
 
-    init(modelUsage: ZaiModelUsageData, width: CGFloat) {
+    init(modelUsage: ZaiModelUsageData, dashboard: InlineUsageDashboardModel?, width: CGFloat) {
         self.modelUsage = modelUsage
+        self.dashboard = dashboard
         self.width = width
     }
 
@@ -74,6 +76,11 @@ struct ZaiHourlyUsageChartMenuView: View {
 
             if self.isExpanded {
                 VStack(alignment: .leading, spacing: 4) {
+                    if let dashboard = self.dashboard {
+                        InlineUsageDashboardContent(model: dashboard, showsBars: false)
+                            .padding(.bottom, 4)
+                    }
+
                     if self.bars.isEmpty {
                         Text(L("No data"))
                             .font(.system(size: 10))

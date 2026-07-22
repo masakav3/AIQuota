@@ -126,6 +126,9 @@ extension StatusItemController {
             let tokenSignature = self.tokenSnapshotReadinessSignature(for: provider)
             let usageHistoryVisible = self.store.supportsPlanUtilizationHistory(for: provider) &&
                 !self.store.shouldHidePlanUtilizationMenuItem(for: provider)
+            let kimiLocalUpdatedAt = provider == .kimi
+                ? self.store.kimiCodeLocalUsage?.updatedAt.timeIntervalSince1970 ?? 0
+                : 0
             parts.append(
                 [
                     provider.rawValue,
@@ -133,6 +136,7 @@ extension StatusItemController {
                     "statusComponents=\(self.statusComponentsRenderSignature(for: provider))",
                     "refreshing=\(self.store.shouldShowRefreshingMenuCardIndicator(for: provider) ? "1" : "0")",
                     "usageHistory=\(usageHistoryVisible ? "1" : "0")",
+                    "kimiLocal=\(kimiLocalUpdatedAt)",
                 ].joined(separator: ":"))
         }
 

@@ -114,10 +114,14 @@ extension UsageMenuCardView.Model {
     }
 
     var hasUsageContent: Bool {
+        self.hasUsageContent(showInlineUsageDashboard: true)
+    }
+
+    func hasUsageContent(showInlineUsageDashboard: Bool) -> Bool {
         !self.metrics.isEmpty ||
             !self.usageNotes.isEmpty ||
             self.openAIAPIUsage != nil ||
-            self.inlineUsageDashboard != nil ||
+            (showInlineUsageDashboard && self.inlineUsageDashboard != nil) ||
             self.codexResetCredits != nil ||
             self.placeholder != nil
     }
@@ -266,8 +270,21 @@ extension UsageMenuCardView.Model {
             return Color(nsColor: .labelColor)
         }
 
+        if AIQuotaProduct.isActive,
+           let color = AIQuotaProduct.visualStyle(for: provider)?.progressColor
+        {
+            return Color(red: color.red, green: color.green, blue: color.blue)
+        }
+
         let color = ProviderDescriptorRegistry.descriptor(for: provider).branding.color
         return Color(red: color.red, green: color.green, blue: color.blue)
+    }
+
+    var warningMarkerColors: [Color] {
+        guard AIQuotaProduct.isActive,
+              let colors = AIQuotaProduct.visualStyle(for: self.provider)?.warningMarkerColors
+        else { return [] }
+        return colors.map { Color(red: $0.red, green: $0.green, blue: $0.blue) }
     }
 
     static func rateWindowLabels(

@@ -36,6 +36,55 @@ struct InlineUsageDashboardModel: Equatable {
 }
 
 extension UsageMenuCardView.Model {
+    static func kimiCodeLocalUsageDashboard(
+        _ usage: KimiCodeLocalUsageSnapshot) -> InlineUsageDashboardModel
+    {
+        let totals = usage.last7Days
+        let points = usage.daily.map { day in
+            InlineUsageDashboardModel.Point(
+                id: day.day,
+                label: Self.shortDayLabel(day.day),
+                value: Double(day.totalTokens),
+                accessibilityValue: "\(day.day): " +
+                    "\(Self.kimiTokenCountString(day.totalTokens)) \(L("tokens"))")
+        }
+        var details = [
+            "Cache read: \(Self.kimiTokenCountString(totals.cacheReadTokens)) \(L("tokens"))",
+            "Cache creation: \(Self.kimiTokenCountString(totals.cacheCreationTokens)) \(L("tokens"))",
+        ]
+        if let topModel = usage.topModel {
+            details.insert("Top model: \(topModel.split(separator: "/").last.map(String.init) ?? topModel)", at: 0)
+        }
+        details.append("Local Kimi Code activity; not quota usage.")
+        return InlineUsageDashboardModel(
+            accessibilityLabel: "Kimi Code local token activity",
+            valueStyle: .tokens,
+            kpis: [
+                .init(
+                    title: L("Today"),
+                    value: Self.kimiTokenCountString(usage.currentDay.totalTokens),
+                    emphasis: true),
+                .init(
+                    title: "7d tokens",
+                    value: Self.kimiTokenCountString(totals.totalTokens),
+                    emphasis: false),
+                .init(
+                    title: L("Requests"),
+                    value: UsageFormatter.tokenCountString(totals.requests),
+                    emphasis: false),
+                .init(
+                    title: "Output",
+                    value: Self.kimiTokenCountString(totals.outputTokens),
+                    emphasis: false),
+            ],
+            points: points,
+            detailLines: details)
+    }
+
+    private static func kimiTokenCountString(_ value: Int64) -> String {
+        UsageFormatter.tokenCountString(Int(clamping: value))
+    }
+
     static func apiProviderUsageNotes(input: Input) -> [String]? {
         if input.provider == .openai,
            let usage = input.snapshot?.openAIAPIUsage
@@ -204,11 +253,22 @@ extension UsageMenuCardView.Model {
     /// Provider branding color for the inline usage bars, matching the provider's switcher tab and
     /// detailed cost-history chart.
     static func inlineDashboardBarColor(for provider: UsageProvider) -> Color {
+        if AIQuotaProduct.isActive,
+           let color = AIQuotaProduct.visualStyle(for: provider)?.progressColor
+        {
+            return Color(red: color.red, green: color.green, blue: color.blue)
+        }
         let color = ProviderDescriptorRegistry.descriptor(for: provider).branding.color
         return Color(red: color.red, green: color.green, blue: color.blue)
     }
 
     private static func resolveInlineUsageDashboard(input: Input) -> InlineUsageDashboardModel? {
+        if input.provider == .kimi,
+           let usage = input.kimiCodeLocalUsage,
+           usage.hasActivity
+        {
+            return self.kimiCodeLocalUsageDashboard(usage)
+        }
         if self.usesProviderCostHistoryAsPrimaryDashboard(input.provider),
            let tokenSnapshot = primaryCostHistorySnapshot(input: input),
            !tokenSnapshot.daily.isEmpty
@@ -810,16 +870,18 @@ extension UsageMenuCardView.Model {
 
 struct InlineUsageDashboardContent: View {
     private let model: InlineUsageDashboardModel
+    private let showsBars: Bool
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
-    init(model: InlineUsageDashboardModel) {
+    init(model: InlineUsageDashboardModel, showsBars: Bool = true) {
         self.model = model
+        self.showsBars = showsBars
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             self.kpis
-            if !self.model.points.isEmpty {
+            if self.showsBars, !self.model.points.isEmpty {
                 MiniUsageBars(model: self.model)
                     .frame(height: 58)
                     .accessibilityLabel(self.model.accessibilityLabel)

@@ -223,6 +223,9 @@ extension UsageStore {
                 self.refreshingProviders.remove(provider)
             }
         }
+        if provider == .kimi {
+            await self.refreshKimiCodeLocalUsage(generation: generation)
+        }
         await self.refreshProviderNow(
             provider,
             allowDisabled: allowDisabled,

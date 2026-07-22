@@ -17,7 +17,7 @@ extension StatusItemController {
         case let .openTerminal(command): (#selector(self.openTerminalCommand(_:)), command)
         case let .loginToProvider(url): (#selector(self.openLoginToProvider(_:)), url)
         case .settings: (#selector(self.showSettingsGeneral), nil)
-        case .about: (#selector(self.showSettingsAbout), nil)
+        case .about: (#selector(self.showAboutPanel), nil)
         case .quit: (#selector(self.quit), nil)
         case let .copyError(message): (#selector(self.copyError(_:)), message)
         case let .focusAgentSession(session, remoteHost):

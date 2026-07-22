@@ -613,7 +613,11 @@ struct MenuDescriptor {
         entries.append(contentsOf: [
             .action(L("Refresh"), .refresh),
             .action(L("Settings..."), .settings),
-            .action(L("About CodexBar"), .about),
+            .action(
+                AIQuotaProduct.isActive
+                    ? AIQuotaProduct.aboutMenuTitle(localizedAbout: L("About"))
+                    : L("About CodexBar"),
+                .about),
             .action(L("Quit"), .quit),
         ])
         return Section(entries: entries)

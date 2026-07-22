@@ -146,6 +146,23 @@ struct ProviderRegistry {
             provider: provider,
             config: settings.providerConfig(for: provider),
             selectedAccount: account)
+        if settings.aiQuotaProductActive {
+            let credential: (key: String, value: String)? = switch provider {
+            case .kimi:
+                (KimiSettingsReader.apiKeyEnvironmentKeys[0], settings.kimiAPIKey)
+            case .minimax:
+                (MiniMaxAPISettingsReader.codingPlanAPITokenKey, settings.minimaxAPIToken)
+            case .zai:
+                (ZaiSettingsReader.apiTokenKey, settings.zaiAPIToken)
+            default:
+                nil
+            }
+            if let credential,
+               !credential.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            {
+                env[credential.key] = credential.value
+            }
+        }
         // Codex account routing scopes remote account fetches such as identity, plan,
         // quotas, and dashboard data. Token-cost/session history is intentionally handled
         // separately because it is provider-level local telemetry from this Mac's Codex sessions,

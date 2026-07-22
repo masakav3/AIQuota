@@ -17,11 +17,12 @@ struct CodexBarApp: App {
     private let account: AccountInfo
 
     init() {
+        AIQuotaProduct.installFirstRunDefaults(in: .standard)
         let env = ProcessInfo.processInfo.environment
         let storedLevel = CodexBarLog.parseLevel(UserDefaults.standard.string(forKey: "debugLogLevel")) ?? .verbose
         let level = CodexBarLog.parseLevel(env["CODEXBAR_LOG_LEVEL"]) ?? storedLevel
         CodexBarLog.bootstrapIfNeeded(.init(
-            destination: .oslog(subsystem: "com.steipete.codexbar"),
+            destination: .oslog(subsystem: AIQuotaProduct.bundleIdentifier),
             level: level,
             json: false))
 
@@ -30,7 +31,7 @@ struct CodexBarApp: App {
         let gitCommit = Bundle.main.object(forInfoDictionaryKey: "CodexGitCommit") as? String ?? "unknown"
         let buildTimestamp = Bundle.main.object(forInfoDictionaryKey: "CodexBuildTimestamp") as? String ?? "unknown"
         CodexBarLog.logger(LogCategories.app).info(
-            "CodexBar starting",
+            "AI Quota starting",
             metadata: [
                 "version": version,
                 "build": build,
@@ -81,25 +82,21 @@ struct CodexBarApp: App {
     var body: some Scene {
         // Hidden 1×1 window to keep SwiftUI's lifecycle alive so `Settings` scene
         // shows the native toolbar tabs even though the UI is AppKit-based.
-        WindowGroup("CodexBarLifecycleKeepalive") {
+        WindowGroup("AIQuotaLifecycleKeepalive") {
             HiddenWindowView()
         }
         .defaultSize(width: 20, height: 20)
         .windowStyle(.hiddenTitleBar)
 
         Settings {
-            PreferencesView(
+            AIQuotaPreferencesView(
                 settings: self.settings,
                 store: self.store,
-                updater: self.appDelegate.updaterController,
-                selection: self.preferencesSelection,
-                managedCodexAccountCoordinator: self.managedCodexAccountCoordinator,
-                codexAccountPromotionCoordinator: self.codexAccountPromotionCoordinator,
                 runProviderLoginFlow: { provider in
                     await self.appDelegate.runProviderLoginFlow(provider)
                 })
         }
-        .defaultSize(width: SettingsPane.windowWidth, height: SettingsPane.windowHeight)
+        .defaultSize(width: 560, height: 580)
         .windowResizability(.contentMinSize)
     }
 

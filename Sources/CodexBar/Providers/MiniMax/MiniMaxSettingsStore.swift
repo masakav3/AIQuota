@@ -15,8 +15,21 @@ extension SettingsStore {
     }
 
     var minimaxCookieHeader: String {
-        get { self.configSnapshot.providerConfig(for: .minimax)?.sanitizedCookieHeader ?? "" }
+        get {
+            if self.aiQuotaProductActive {
+                return self.aiQuotaCredential(for: .minimaxCookie)
+            }
+            return self.configSnapshot.providerConfig(for: .minimax)?.sanitizedCookieHeader ?? ""
+        }
         set {
+            if self.aiQuotaProductActive {
+                self.storeAIQuotaCredentialFromSetting(
+                    newValue,
+                    kind: .minimaxCookie,
+                    provider: .minimax,
+                    field: "cookieHeader")
+                return
+            }
             self.updateProviderConfig(provider: .minimax) { entry in
                 entry.cookieHeader = self.normalizedConfigValue(newValue)
             }
@@ -25,8 +38,21 @@ extension SettingsStore {
     }
 
     var minimaxAPIToken: String {
-        get { self.configSnapshot.providerConfig(for: .minimax)?.sanitizedAPIKey ?? "" }
+        get {
+            if self.aiQuotaProductActive {
+                return self.aiQuotaCredential(for: .minimaxAPIToken)
+            }
+            return self.configSnapshot.providerConfig(for: .minimax)?.sanitizedAPIKey ?? ""
+        }
         set {
+            if self.aiQuotaProductActive {
+                self.storeAIQuotaCredentialFromSetting(
+                    newValue,
+                    kind: .minimaxAPIToken,
+                    provider: .minimax,
+                    field: "apiKey")
+                return
+            }
             self.updateProviderConfig(provider: .minimax) { entry in
                 entry.apiKey = self.normalizedConfigValue(newValue)
             }
@@ -39,6 +65,9 @@ extension SettingsStore {
         set {
             self.updateProviderConfig(provider: .minimax) { entry in
                 entry.cookieSource = newValue
+            }
+            if self.aiQuotaProductActive {
+                self.setAIQuotaProviderValidated(.minimax, validated: false)
             }
             self.logProviderModeChange(provider: .minimax, field: "cookieSource", value: newValue.rawValue)
         }

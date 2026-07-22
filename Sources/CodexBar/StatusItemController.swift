@@ -44,9 +44,11 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     private static let defaultMenuRefreshEnabled = !SettingsStore.isRunningTests
     private(set) static var menuRefreshEnabled = !SettingsStore.isRunningTests
     static let quotaWarningFlashDuration: TimeInterval = 60
-    private nonisolated static let statusItemAccessibilityTitle = "CodexBar"
-    private nonisolated static let debugStatusItemAccessibilityTitle = "CodexBar Debug"
-    private nonisolated static let statusItemAccessibilityIdentifierPrefix = "CodexBar.StatusItem"
+    private nonisolated static let statusItemAccessibilityTitle = AIQuotaProduct.isActive ? "AI Quota" : "CodexBar"
+    private nonisolated static let debugStatusItemAccessibilityTitle =
+        AIQuotaProduct.isActive ? "AI Quota Debug" : "CodexBar Debug"
+    private nonisolated static let statusItemAccessibilityIdentifierPrefix =
+        AIQuotaProduct.isActive ? "AIQuota.StatusItem" : "CodexBar.StatusItem"
     private nonisolated static let mergedLegacyDefaultItemIndex = 0
 
     enum StatusItemIdentity {
@@ -56,9 +58,9 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
         var autosaveName: String {
             switch self {
             case .merged:
-                "codexbar-merged"
+                AIQuotaProduct.isActive ? "aiquota-merged" : "codexbar-merged"
             case let .provider(provider):
-                "codexbar-\(provider.rawValue)"
+                "\(AIQuotaProduct.isActive ? "aiquota" : "codexbar")-\(provider.rawValue)"
             }
         }
 
@@ -211,6 +213,8 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     var manualRefreshViewportRestoreState = ManualRefreshViewportRestoreState()
     var blinkTask: Task<Void, Never>?
     var menuBarCountdownRefreshTask: Task<Void, Never>?
+    var aiQuotaRotationTask: Task<Void, Never>?
+    var aiQuotaRotation = AIQuotaRotation(providers: [])
     var loginTask: Task<Void, Never>? {
         didSet { self.refreshMenusForLoginStateChange() }
     }
@@ -437,6 +441,9 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
         }
         self.updateVisibility()
         self.updateIcons()
+        if !SettingsStore.isRunningTests {
+            self.startAIQuotaRotation()
+        }
         self.scheduleCodexAccountMenuProjectionRevalidationIfNeeded(
             for: self.store.enabledProvidersForDisplay())
         self.scheduleStartupStatusItemVisibilityCheck()
@@ -896,7 +903,11 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     }
 
     var shouldMergeIcons: Bool {
-        self.settings.mergeIcons && self.store.enabledProvidersForDisplay().count > 1
+        let providerCount = self.store.enabledProvidersForDisplay().count
+        if AIQuotaProduct.isActive {
+            return AIQuotaProduct.shouldUseUnifiedStatusItem(providerCount: providerCount)
+        }
+        return self.settings.mergeIcons && providerCount > 1
     }
 
     func switchAccountSubtitle(for target: UsageProvider) -> String? {
@@ -919,6 +930,7 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
         }
         self.blinkTask?.cancel()
         self.menuBarCountdownRefreshTask?.cancel()
+        self.aiQuotaRotationTask?.cancel()
         self.loginTask?.cancel()
         self.screenChangeVisibilityTask?.cancel()
         self.pendingScreenChangePreviousCount = nil

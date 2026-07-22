@@ -173,12 +173,14 @@ struct ClaudeResilienceTests {
     }
 
     @Test
-    func `suppresses single flake when prior data exists`() {
+    func `suppresses two flakes when prior data exists`() {
         var gate = ConsecutiveFailureGate()
         let firstFailure = gate.shouldSurfaceError(onFailureWithPriorData: true)
         let secondFailure = gate.shouldSurfaceError(onFailureWithPriorData: true)
+        let thirdFailure = gate.shouldSurfaceError(onFailureWithPriorData: true)
         #expect(firstFailure == false)
-        #expect(secondFailure == true)
+        #expect(secondFailure == false)
+        #expect(thirdFailure == true)
     }
 
     @Test
@@ -360,11 +362,17 @@ struct ClaudeResilienceTests {
                 let secondResult = await MainActor.run {
                     (
                         updatedAt: store.snapshot(for: .claude)?.updatedAt,
-                        error: store.error(for: .claude))
+                        hasError: store.error(for: .claude) != nil)
                 }
 
                 #expect(secondResult.updatedAt == prior.updatedAt)
-                #expect(secondResult.error?.localizedCaseInsensitiveContains("Missing Current session") == true)
+                #expect(!secondResult.hasError)
+
+                await store.refreshProvider(.claude)
+                let thirdResult = await claudeSnapshotAndError(in: store)
+
+                #expect(thirdResult.0 == prior.updatedAt)
+                #expect(thirdResult.1?.localizedCaseInsensitiveContains("Missing Current session") == true)
 
                 try await MainActor.run {
                     let baseSpec = try #require(store.providerSpecs[.claude])
@@ -475,7 +483,13 @@ struct ClaudeResilienceTests {
                 }
 
                 #expect(secondResult.updatedAt == prior.updatedAt)
-                #expect(secondResult.hasError)
+                #expect(!secondResult.hasError)
+
+                await store.refreshProvider(.claude)
+                let thirdResult = await claudeSnapshotAndError(in: store)
+
+                #expect(thirdResult.0 == prior.updatedAt)
+                #expect(thirdResult.1 != nil)
             }
         }
     }
@@ -877,6 +891,11 @@ struct ClaudeResilienceTests {
             }
         }
     }
+}
+
+@MainActor
+private func claudeSnapshotAndError(in store: UsageStore) -> (Date?, String?) {
+    (store.snapshot(for: .claude)?.updatedAt, store.error(for: .claude))
 }
 
 extension ClaudeResilienceTests {

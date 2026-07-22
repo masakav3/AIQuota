@@ -179,6 +179,8 @@ final class UsageStore {
     @ObservationIgnored var claudeSwapRefreshTask: Task<Void, Never>?
     @ObservationIgnored var claudeSwapTransientState = ClaudeSwapTransientState()
     var tokenSnapshots: [UsageProvider: CostUsageTokenSnapshot] = [:]
+    var kimiCodeLocalUsage: KimiCodeLocalUsageSnapshot?
+    @ObservationIgnored var kimiCodeLocalUsageSourceFingerprint: String?
     var tokenSnapshotPublications: [UsageProvider: TokenSnapshotPublication] = [:]
     var tokenSnapshotPublicationRevisions: [UsageProvider: UInt64] = [:]
     var tokenErrors: [UsageProvider: String] = [:]
@@ -250,6 +252,8 @@ final class UsageStore {
     @ObservationIgnored var _test_providerRefreshOverride: (@MainActor (UsageProvider) async -> Void)?
     @ObservationIgnored var _test_providerFetchOutcomeOverride: (@MainActor (
         UsageProvider) async -> ProviderFetchOutcome)?
+    @ObservationIgnored var _test_kimiCodeLocalUsageLoaderOverride: (@MainActor () async ->
+        KimiCodeLocalUsageSnapshot?)?
     @ObservationIgnored var _test_tokenUsageRefreshOverride: (@MainActor (UsageProvider, Bool) async -> Void)?
     @ObservationIgnored var _test_tokenUsageSnapshotLoaderOverride: (@MainActor (
         UsageProvider,

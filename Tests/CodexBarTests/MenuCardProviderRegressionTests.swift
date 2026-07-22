@@ -6,6 +6,21 @@ import Testing
 
 struct MenuCardProviderRegressionTests {
     @Test
+    func `AI Quota provider palette keeps GLM MiniMax and Kimi visually distinct`() throws {
+        let glm = try #require(AIQuotaProduct.visualStyle(for: .zai))
+        let minimax = try #require(AIQuotaProduct.visualStyle(for: .minimax))
+        let kimi = try #require(AIQuotaProduct.visualStyle(for: .kimi))
+
+        #expect(glm.progressColor == ProviderColor(hex: 0x111111))
+        #expect(glm.warningMarkerColors == [ProviderColor(hex: 0xFF453A), ProviderColor(hex: 0xFFFFFF)])
+        #expect(minimax.progressColor == ProviderColor(hex: 0xEF473A))
+        #expect(minimax.warningMarkerColors == [ProviderColor(hex: 0xF2B84B)])
+        #expect(kimi.progressColor == ProviderColor(hex: 0x173B72))
+        #expect(kimi.menuBarIconTint == ProviderColor(hex: 0xD4A017))
+        #expect(kimi.menuBarSystemSymbolName == "moon.fill")
+    }
+
+    @Test
     func `menu card keeps positive sub percent usage visible`() {
         let metric = UsageMenuCardView.Model.Metric(
             id: "sub-percent",

@@ -34,11 +34,21 @@ struct ClaudeWebRefreshResilienceTests {
                 let secondResult = await MainActor.run {
                     (
                         updatedAt: store.snapshot(for: .claude)?.updatedAt,
-                        error: store.error(for: .claude))
+                        hasError: store.error(for: .claude) != nil)
                 }
 
                 #expect(secondResult.updatedAt == prior.updatedAt)
-                #expect(secondResult.error == ClaudeWebAPIFetcher.FetchError.unauthorized.localizedDescription)
+                #expect(!secondResult.hasError)
+
+                await store.refreshProvider(.claude)
+                let thirdResult = await MainActor.run {
+                    (
+                        updatedAt: store.snapshot(for: .claude)?.updatedAt,
+                        error: store.error(for: .claude))
+                }
+
+                #expect(thirdResult.updatedAt == prior.updatedAt)
+                #expect(thirdResult.error == ClaudeWebAPIFetcher.FetchError.unauthorized.localizedDescription)
             }
         }
     }
@@ -101,12 +111,22 @@ struct ClaudeWebRefreshResilienceTests {
                 await store.refreshProvider(.claude)
                 let secondResult = await MainActor.run {
                     (
+                        updatedAt: store.snapshot(for: .claude)?.updatedAt,
+                        hasError: store.error(for: .claude) != nil)
+                }
+
+                #expect(secondResult.updatedAt == prior.updatedAt)
+                #expect(!secondResult.hasError)
+
+                await store.refreshProvider(.claude)
+                let thirdResult = await MainActor.run {
+                    (
                         hasSnapshot: store.snapshot(for: .claude) != nil,
                         error: store.error(for: .claude))
                 }
 
-                #expect(!secondResult.hasSnapshot)
-                #expect(secondResult.error?.localizedCaseInsensitiveContains("Missing Current session") == true)
+                #expect(!thirdResult.hasSnapshot)
+                #expect(thirdResult.error?.localizedCaseInsensitiveContains("Missing Current session") == true)
             }
         }
     }

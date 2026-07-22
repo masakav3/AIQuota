@@ -5,13 +5,19 @@ import SwiftUI
 extension StatusItemController {
     static let zaiHourlyUsageChartID = "zaiHourlyUsageChart"
 
+    func makeZaiHourlyUsageSubmenu(provider: UsageProvider, width: CGFloat) -> NSMenu? {
+        guard provider == .zai,
+              self.store.snapshot(for: provider)?.zaiUsage?.modelUsage != nil
+        else { return nil }
+        return self.makeHostedSubviewPlaceholderMenu(
+            chartID: Self.zaiHourlyUsageChartID,
+            provider: provider,
+            width: width)
+    }
+
     @discardableResult
     func addZaiHourlyUsageMenuItemIfNeeded(to menu: NSMenu, provider: UsageProvider, width: CGFloat) -> Bool {
-        guard provider == .zai else { return false }
-        guard let snapshot = self.store.snapshot(for: provider),
-              snapshot.zaiUsage?.modelUsage != nil
-        else { return false }
-        let submenu = self.makeHostedSubviewPlaceholderMenu(chartID: Self.zaiHourlyUsageChartID, provider: provider)
+        guard let submenu = self.makeZaiHourlyUsageSubmenu(provider: provider, width: width) else { return false }
         let item = self.makeMenuCardItem(
             HStack(spacing: 0) {
                 Text(L("Hourly Usage"))

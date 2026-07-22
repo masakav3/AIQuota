@@ -6,6 +6,7 @@ extension UsageMenuCardView.Model {
         let provider: UsageProvider
         let metadata: ProviderMetadata
         let snapshot: UsageSnapshot?
+        let kimiCodeLocalUsage: KimiCodeLocalUsageSnapshot?
         let codexProjection: CodexConsumerProjection?
         let credits: CreditsSnapshot?
         let creditsError: String?
@@ -43,6 +44,7 @@ extension UsageMenuCardView.Model {
             provider: UsageProvider,
             metadata: ProviderMetadata,
             snapshot: UsageSnapshot?,
+            kimiCodeLocalUsage: KimiCodeLocalUsageSnapshot? = nil,
             codexProjection: CodexConsumerProjection? = nil,
             credits: CreditsSnapshot?,
             creditsError: String?,
@@ -79,6 +81,7 @@ extension UsageMenuCardView.Model {
             self.provider = provider
             self.metadata = metadata
             self.snapshot = snapshot
+            self.kimiCodeLocalUsage = kimiCodeLocalUsage
             self.codexProjection = codexProjection
             self.credits = credits
             self.creditsError = creditsError

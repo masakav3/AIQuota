@@ -893,7 +893,10 @@ final class ProviderSwitcherView: NSView {
     }
 
     private static func switcherTitle(for provider: UsageProvider) -> String {
-        ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName
+        if AIQuotaProduct.isActive {
+            return AIQuotaProduct.displayName(for: provider)
+        }
+        return ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName
     }
 }
 
@@ -1146,7 +1149,13 @@ extension ProviderSwitcherView {
     {
         switch selection {
         case let .provider(provider):
-            let color = ProviderDescriptorRegistry.descriptor(for: provider).branding.color
+            let color = if AIQuotaProduct.isActive,
+                           let override = AIQuotaProduct.visualStyle(for: provider)?.progressColor
+            {
+                override
+            } else {
+                ProviderDescriptorRegistry.descriptor(for: provider).branding.color
+            }
             return NSColor(deviceRed: color.red, green: color.green, blue: color.blue, alpha: 1)
         case .overview:
             return NSColor.secondaryLabelColor

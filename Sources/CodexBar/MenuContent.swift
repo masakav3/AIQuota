@@ -214,8 +214,10 @@ struct StatusIconView: View {
     }
 
     private var accessibilityLabel: String {
-        let descriptor = ProviderDescriptorRegistry.descriptor(for: self.provider)
-        return descriptor.metadata.displayName
+        if AIQuotaProduct.isActive {
+            return AIQuotaProduct.displayName(for: self.provider)
+        }
+        return ProviderDescriptorRegistry.descriptor(for: self.provider).metadata.displayName
     }
 
     private var accessibilityValue: String {

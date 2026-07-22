@@ -14,13 +14,29 @@ extension SettingsStore {
             self.updateProviderConfig(provider: .kimi) { entry in
                 entry.source = source
             }
+            if self.aiQuotaProductActive {
+                self.setAIQuotaProviderValidated(.kimi, validated: false)
+            }
             self.logProviderModeChange(provider: .kimi, field: "usageSource", value: newValue.rawValue)
         }
     }
 
     var kimiAPIKey: String {
-        get { self.configSnapshot.providerConfig(for: .kimi)?.sanitizedAPIKey ?? "" }
+        get {
+            if self.aiQuotaProductActive {
+                return self.aiQuotaCredential(for: .kimiAPIKey)
+            }
+            return self.configSnapshot.providerConfig(for: .kimi)?.sanitizedAPIKey ?? ""
+        }
         set {
+            if self.aiQuotaProductActive {
+                self.storeAIQuotaCredentialFromSetting(
+                    newValue,
+                    kind: .kimiAPIKey,
+                    provider: .kimi,
+                    field: "apiKey")
+                return
+            }
             self.updateProviderConfig(provider: .kimi) { entry in
                 entry.apiKey = self.normalizedConfigValue(newValue)
             }
@@ -29,8 +45,21 @@ extension SettingsStore {
     }
 
     var kimiManualCookieHeader: String {
-        get { self.configSnapshot.providerConfig(for: .kimi)?.sanitizedCookieHeader ?? "" }
+        get {
+            if self.aiQuotaProductActive {
+                return self.aiQuotaCredential(for: .kimiCookie)
+            }
+            return self.configSnapshot.providerConfig(for: .kimi)?.sanitizedCookieHeader ?? ""
+        }
         set {
+            if self.aiQuotaProductActive {
+                self.storeAIQuotaCredentialFromSetting(
+                    newValue,
+                    kind: .kimiCookie,
+                    provider: .kimi,
+                    field: "cookieHeader")
+                return
+            }
             self.updateProviderConfig(provider: .kimi) { entry in
                 entry.cookieHeader = self.normalizedConfigValue(newValue)
             }
@@ -43,6 +72,9 @@ extension SettingsStore {
         set {
             self.updateProviderConfig(provider: .kimi) { entry in
                 entry.cookieSource = newValue
+            }
+            if self.aiQuotaProductActive {
+                self.setAIQuotaProviderValidated(.kimi, validated: false)
             }
             self.logProviderModeChange(provider: .kimi, field: "cookieSource", value: newValue.rawValue)
         }

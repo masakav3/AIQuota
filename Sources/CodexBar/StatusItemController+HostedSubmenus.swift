@@ -60,6 +60,8 @@ extension StatusItemController {
             Self.storageBreakdownID,
             Self.statusComponentsID,
             Self.zaiHourlyUsageChartID,
+            Self.miniMaxUsageChartID,
+            Self.kimiCodeUsageChartID,
         ]
         return menu.items.contains { item in
             guard let id = item.representedObject as? String else { return false }
@@ -151,6 +153,18 @@ extension StatusItemController {
             } else {
                 false
             }
+        case Self.miniMaxUsageChartID, Self.kimiCodeUsageChartID:
+            if let providerRawValue = placeholder.toolTip,
+               let provider = UsageProvider(rawValue: providerRawValue)
+            {
+                self.appendProviderInlineUsageChartItem(
+                    chartID: chartID,
+                    to: menu,
+                    provider: provider,
+                    width: width)
+            } else {
+                false
+            }
         default:
             false
         }
@@ -216,6 +230,16 @@ extension StatusItemController {
         case Self.zaiHourlyUsageChartID:
             if let provider = identity.provider {
                 self.appendZaiHourlyUsageChartItem(to: menu, provider: provider, width: width)
+            } else {
+                false
+            }
+        case Self.miniMaxUsageChartID, Self.kimiCodeUsageChartID:
+            if let provider = identity.provider {
+                self.appendProviderInlineUsageChartItem(
+                    chartID: identity.chartID,
+                    to: menu,
+                    provider: provider,
+                    width: width)
             } else {
                 false
             }
@@ -292,6 +316,10 @@ extension StatusItemController {
             .text(identity.provider.map(self.statusComponentsRenderSignature(for:)) ?? "missing-provider")
         case Self.zaiHourlyUsageChartID:
             .text(identity.provider.map(self.zaiHourlyUsageRenderSignature(for:)) ?? "missing-provider")
+        case Self.miniMaxUsageChartID, Self.kimiCodeUsageChartID:
+            .text(identity.provider.map {
+                self.providerInlineUsageRenderSignature(chartID: identity.chartID, provider: $0)
+            } ?? "missing-provider")
         default:
             .text("unknown")
         }
@@ -307,6 +335,33 @@ extension StatusItemController {
             return .text("none")
         }
         return .costHistory(CostHistoryChartMenuView.renderFingerprint(from: snapshot, provider: provider))
+    }
+
+    private func appendProviderInlineUsageChartItem(
+        chartID: String,
+        to menu: NSMenu,
+        provider: UsageProvider,
+        width: CGFloat) -> Bool
+    {
+        switch chartID {
+        case Self.miniMaxUsageChartID:
+            self.appendMiniMaxUsageChartItem(to: menu, provider: provider, width: width)
+        case Self.kimiCodeUsageChartID:
+            self.appendKimiCodeUsageChartItem(to: menu, provider: provider, width: width)
+        default:
+            false
+        }
+    }
+
+    private func providerInlineUsageRenderSignature(chartID: String, provider: UsageProvider) -> String {
+        switch chartID {
+        case Self.miniMaxUsageChartID:
+            self.miniMaxUsageRenderSignature(for: provider)
+        case Self.kimiCodeUsageChartID:
+            self.kimiCodeUsageRenderSignature(for: provider)
+        default:
+            "unknown"
+        }
     }
 
     private func usageHistoryRenderSignature(for provider: UsageProvider) -> String {
@@ -350,6 +405,51 @@ extension StatusItemController {
     private func zaiHourlyUsageRenderSignature(for provider: UsageProvider) -> String {
         guard let modelUsage = self.store.snapshot(for: provider)?.zaiUsage?.modelUsage else { return "none" }
         return Self.zaiHourlyUsageRenderSignature(modelUsage: modelUsage, now: Date())
+    }
+
+    private func miniMaxUsageRenderSignature(for provider: UsageProvider) -> String {
+        guard let billing = self.store.snapshot(for: provider)?.minimaxUsage?.billingSummary else { return "none" }
+        let daily = billing.daily
+            .map { "\($0.day)=\($0.tokens),\($0.cash.map { String($0) } ?? "nil")" }
+            .joined(separator: ";")
+        let methods = billing.topMethods
+            .map { "\($0.name)=\($0.tokens),\($0.cash.map { String($0) } ?? "nil")" }
+            .joined(separator: ";")
+        let models = billing.topModels
+            .map { "\($0.name)=\($0.tokens),\($0.cash.map { String($0) } ?? "nil")" }
+            .joined(separator: ";")
+        return [
+            "\(billing.todayTokens)",
+            "\(billing.last30DaysTokens)",
+            billing.todayCash.map { String($0) } ?? "nil",
+            billing.last30DaysCash.map { String($0) } ?? "nil",
+            daily,
+            methods,
+            models,
+        ].joined(separator: "|")
+    }
+
+    private func kimiCodeUsageRenderSignature(for provider: UsageProvider) -> String {
+        guard provider == .kimi,
+              let usage = self.store.kimiCodeLocalUsage
+        else {
+            return "none"
+        }
+        return usage.daily.map { day in
+            let models = day.modelRequests
+                .sorted { $0.key < $1.key }
+                .map { "\($0.key)=\($0.value)" }
+                .joined(separator: ",")
+            return [
+                day.day,
+                String(day.requests),
+                String(day.inputOtherTokens),
+                String(day.outputTokens),
+                String(day.cacheReadTokens),
+                String(day.cacheCreationTokens),
+                models,
+            ].joined(separator: ":")
+        }.joined(separator: ";")
     }
 
     static func zaiHourlyUsageRenderSignature(modelUsage: ZaiModelUsageData, now: Date) -> String {
@@ -634,7 +734,10 @@ extension StatusItemController {
             return true
         }
 
-        let chartView = ZaiHourlyUsageChartMenuView(modelUsage: modelUsage, width: width)
+        let chartView = ZaiHourlyUsageChartMenuView(
+            modelUsage: modelUsage,
+            dashboard: self.menuCardModel(for: provider)?.inlineUsageDashboard,
+            width: width)
         let hosting = MenuHostingView(rootView: chartView)
         hosting.frame = NSRect(
             origin: .zero,

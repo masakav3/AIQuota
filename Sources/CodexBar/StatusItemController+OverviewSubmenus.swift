@@ -13,9 +13,25 @@ extension StatusItemController {
             return submenu
         }
         if provider == .zai,
-           let submenu = self.makeZaiUsageDetailsSubmenu(snapshot: self.store.snapshot(for: provider))
+           let submenu = self.makeZaiHourlyUsageSubmenu(provider: provider, width: width)
         {
             return submenu
+        }
+        if provider == .minimax,
+           model.inlineUsageDashboard != nil
+        {
+            return self.makeHostedSubviewPlaceholderMenu(
+                chartID: Self.miniMaxUsageChartID,
+                provider: provider,
+                width: width)
+        }
+        if provider == .kimi,
+           model.inlineUsageDashboard != nil
+        {
+            return self.makeHostedSubviewPlaceholderMenu(
+                chartID: Self.kimiCodeUsageChartID,
+                provider: provider,
+                width: width)
         }
         // Mistral's top usage pane has no rate-limit bars of its own, so its Overview row always
         // prioritizes cost history too. Other `tokenCostRequiresProviderSnapshot` providers (e.g.

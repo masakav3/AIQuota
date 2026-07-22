@@ -27,6 +27,8 @@ extension StatusItemController {
         self.blinkTask = nil
         self.menuBarCountdownRefreshTask?.cancel()
         self.menuBarCountdownRefreshTask = nil
+        self.aiQuotaRotationTask?.cancel()
+        self.aiQuotaRotationTask = nil
         self.loginTask?.cancel()
         self.loginTask = nil
         for task in self.manualRefreshTasks.values {
