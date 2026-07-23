@@ -25,6 +25,8 @@ enum AIQuotaProduct {
 
     private static let defaultsVersionKey = "aiQuotaDefaultsVersion"
     private static let defaultsVersion = 1
+    private static let claudeSessionMigrationVersionKey = "aiQuotaClaudeSessionMigrationVersion"
+    private static let claudeSessionMigrationVersion = 1
 
     static func includes(_ provider: UsageProvider) -> Bool {
         self.providers.contains(provider)
@@ -116,5 +118,19 @@ enum AIQuotaProduct {
         defaults.set(true, forKey: "quotaWarningWeeklyEnabled")
         defaults.set(self.defaultRotationInterval, forKey: "aiQuotaRotationInterval")
         defaults.set(self.defaultsVersion, forKey: self.defaultsVersionKey)
+    }
+
+    /// Keep rotating Claude credentials owned and refreshed by Claude Code instead of proxying them through OAuth.
+    static func migratedClaudeUsageSource(
+        from currentSource: ClaudeUsageDataSource,
+        defaults: UserDefaults) -> ClaudeUsageDataSource?
+    {
+        guard defaults.integer(forKey: self.claudeSessionMigrationVersionKey)
+            < self.claudeSessionMigrationVersion
+        else {
+            return nil
+        }
+        defaults.set(self.claudeSessionMigrationVersion, forKey: self.claudeSessionMigrationVersionKey)
+        return currentSource == .auto ? .cli : nil
     }
 }

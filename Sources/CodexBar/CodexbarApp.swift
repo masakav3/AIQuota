@@ -47,6 +47,12 @@ struct CodexBarApp: App {
 
         let preferencesSelection = PreferencesSelection()
         let settings = SettingsStore()
+        if let source = AIQuotaProduct.migratedClaudeUsageSource(
+            from: settings.claudeUsageDataSource,
+            defaults: .standard)
+        {
+            settings.claudeUsageDataSource = source
+        }
         Self.applyLanguagePreference(from: settings)
         configureUsageFormatterLocalizationProvider()
         let managedCodexAccountCoordinator = ManagedCodexAccountCoordinator()

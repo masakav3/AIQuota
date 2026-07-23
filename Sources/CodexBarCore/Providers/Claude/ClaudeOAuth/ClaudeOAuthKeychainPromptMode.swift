@@ -9,6 +9,8 @@ public enum ClaudeOAuthKeychainPromptMode: String, Sendable, Codable, CaseIterab
 public enum ClaudeOAuthKeychainPromptPreference {
     static let releaseApplicationDefaultsDomain = "com.steipete.codexbar"
     static let debugApplicationDefaultsDomain = "com.steipete.codexbar.debug"
+    static let aiQuotaApplicationDefaultsDomain = "com.matype.aiquota"
+    static let aiQuotaDebugApplicationDefaultsDomain = "com.matype.aiquota.debug"
     private static let userDefaultsKey = "claudeOAuthKeychainPromptMode"
 
     static var applicationDefaultsDomain: String {
@@ -119,6 +121,16 @@ public enum ClaudeOAuthKeychainPromptPreference {
 
     private static func defaultsDomain(forBundleIdentifier bundleIdentifier: String?) -> String? {
         guard let bundleIdentifier else { return nil }
+        if bundleIdentifier == self.aiQuotaDebugApplicationDefaultsDomain
+            || bundleIdentifier.hasPrefix("\(self.aiQuotaDebugApplicationDefaultsDomain).")
+        {
+            return self.aiQuotaDebugApplicationDefaultsDomain
+        }
+        if bundleIdentifier == self.aiQuotaApplicationDefaultsDomain
+            || bundleIdentifier.hasPrefix("\(self.aiQuotaApplicationDefaultsDomain).")
+        {
+            return self.aiQuotaApplicationDefaultsDomain
+        }
         // Check debug first because its identifier is a child of the release identifier.
         if bundleIdentifier == self.debugApplicationDefaultsDomain
             || bundleIdentifier.hasPrefix("\(self.debugApplicationDefaultsDomain).")

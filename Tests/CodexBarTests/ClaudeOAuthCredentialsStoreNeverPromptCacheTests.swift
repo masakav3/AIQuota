@@ -463,6 +463,20 @@ struct ClaudeOAuthCredentialsStoreNeverPromptCacheTests {
             invocationURL: nil)
         #expect(debugWidgetDomain == ClaudeOAuthKeychainPromptPreference.debugApplicationDefaultsDomain)
 
+        let aiQuotaDomain = ClaudeOAuthKeychainPromptPreference.resolveApplicationDefaultsDomain(
+            bundleIdentifier: "com.matype.aiquota",
+            bundleURL: nil,
+            executableURL: nil,
+            invocationURL: nil)
+        #expect(aiQuotaDomain == ClaudeOAuthKeychainPromptPreference.aiQuotaApplicationDefaultsDomain)
+
+        let aiQuotaDebugWidgetDomain = ClaudeOAuthKeychainPromptPreference.resolveApplicationDefaultsDomain(
+            bundleIdentifier: "com.matype.aiquota.debug.widget",
+            bundleURL: nil,
+            executableURL: nil,
+            invocationURL: nil)
+        #expect(aiQuotaDebugWidgetDomain == ClaudeOAuthKeychainPromptPreference.aiQuotaDebugApplicationDefaultsDomain)
+
         let standaloneDomain = ClaudeOAuthKeychainPromptPreference.resolveApplicationDefaultsDomain(
             bundleIdentifier: nil,
             bundleURL: nil,

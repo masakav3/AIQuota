@@ -29,6 +29,28 @@ struct AIQuotaProductTests {
     }
 
     @Test
+    func `migrates automatic Claude usage to CLI management once`() throws {
+        let suite = "AIQuotaProductTests-claude-session-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        #expect(AIQuotaProduct.migratedClaudeUsageSource(from: .auto, defaults: defaults) == .cli)
+        #expect(AIQuotaProduct.migratedClaudeUsageSource(from: .auto, defaults: defaults) == nil)
+    }
+
+    @Test
+    func `preserves an explicit Claude usage source during session migration`() throws {
+        let suite = "AIQuotaProductTests-claude-explicit-source-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        #expect(AIQuotaProduct.migratedClaudeUsageSource(from: .web, defaults: defaults) == nil)
+        #expect(AIQuotaProduct.migratedClaudeUsageSource(from: .auto, defaults: defaults) == nil)
+    }
+
+    @Test
     func `product scope follows the five provider rotation order`() {
         #expect(AIQuotaProduct.providers == [.codex, .claude, .kimi, .minimax, .zai])
         for provider in AIQuotaProduct.providers {
