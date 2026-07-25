@@ -50,6 +50,18 @@ struct AIQuotaPreferencesView: View {
                 }
             }
 
+            Section {
+                Toggle("Claude 使用本地代理", isOn: self.$settings.aiQuotaClaudeProxyEnabled)
+                if self.settings.aiQuotaClaudeProxyEnabled {
+                    TextField("代理地址", text: self.$settings.aiQuotaClaudeProxyURL)
+                        .textFieldStyle(.roundedBorder)
+                }
+            } header: {
+                Text("Claude 网络")
+            } footer: {
+                Text("仅用于 Claude 额度刷新，不修改系统代理，也不影响其他 AI 服务。")
+            }
+
             Section("通知") {
                 Toggle("额度提醒", isOn: self.$settings.quotaWarningNotificationsEnabled)
                 Toggle("额度重置提醒", isOn: self.$settings.sessionQuotaNotificationsEnabled)

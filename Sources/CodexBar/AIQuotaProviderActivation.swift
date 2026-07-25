@@ -42,6 +42,11 @@ extension SettingsStore {
         self.userDefaults.set(
             providers.map(\.rawValue).sorted(),
             forKey: Self.aiQuotaValidatedProvidersKey)
+        if !validated, self.providerConfig(for: provider)?.enabled == true {
+            self.updateProviderConfig(provider: provider) { entry in
+                entry.enabled = false
+            }
+        }
     }
 
     func setAIQuotaProviderOverviewMembership(_ provider: UsageProvider, included: Bool) {

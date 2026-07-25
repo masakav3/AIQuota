@@ -902,7 +902,6 @@ extension SettingsStore {
 
     func isProviderEnabled(provider: UsageProvider, metadata: ProviderMetadata) -> Bool {
         guard !self.aiQuotaProductActive || AIQuotaProduct.includes(provider) else { return false }
-        guard self.canEnableAIQuotaProvider(provider) else { return false }
         return self.providerEnablement[provider] ?? metadata.defaultEnabled
     }
 
@@ -911,7 +910,6 @@ extension SettingsStore {
         metadataByProvider: [UsageProvider: ProviderMetadata]) -> Bool
     {
         guard !self.aiQuotaProductActive || AIQuotaProduct.includes(provider) else { return false }
-        guard self.canEnableAIQuotaProvider(provider) else { return false }
         let defaultEnabled = metadataByProvider[provider]?.defaultEnabled ?? false
         return self.providerEnablement[provider] ?? defaultEnabled
     }
@@ -920,7 +918,6 @@ extension SettingsStore {
         _ = metadataByProvider
         return self.orderedProviders().filter {
             (!self.aiQuotaProductActive || AIQuotaProduct.includes($0)) &&
-                self.canEnableAIQuotaProvider($0) &&
                 (self.providerEnablement[$0] ?? false)
         }
     }

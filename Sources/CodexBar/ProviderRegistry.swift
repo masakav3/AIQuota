@@ -162,6 +162,12 @@ struct ProviderRegistry {
             {
                 env[credential.key] = credential.value
             }
+            if provider == .claude {
+                env = AIQuotaClaudeProxy.applying(
+                    to: env,
+                    enabled: settings.aiQuotaClaudeProxyEnabled,
+                    url: settings.aiQuotaClaudeProxyURL)
+            }
         }
         // Codex account routing scopes remote account fetches such as identity, plan,
         // quotas, and dashboard data. Token-cost/session history is intentionally handled

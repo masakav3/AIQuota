@@ -77,6 +77,46 @@ struct AIQuotaProviderActivationTests {
     }
 
     @Test
+    func `persisted monitor selection survives restart when validation preferences are unavailable`() throws {
+        let suiteName = "AIQuotaProviderActivationTests-restart-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let configStore = testConfigStore(suiteName: suiteName)
+        let credentialStore = InMemoryAIQuotaCredentialStore()
+
+        let firstLaunch = SettingsStore(
+            userDefaults: defaults,
+            configStore: configStore,
+            aiQuotaCredentialStore: credentialStore,
+            aiQuotaProductActive: true,
+            performInitialProviderDetection: false)
+        for provider in [UsageProvider.kimi, .zai] {
+            let metadata = ProviderDescriptorRegistry.descriptor(for: provider).metadata
+            firstLaunch.setAIQuotaProviderValidated(provider, validated: true)
+            firstLaunch.setProviderEnabled(provider: provider, metadata: metadata, enabled: true)
+        }
+
+        defaults.removeObject(forKey: "aiQuotaValidatedProviders")
+        let restarted = SettingsStore(
+            userDefaults: defaults,
+            configStore: configStore,
+            aiQuotaCredentialStore: credentialStore,
+            aiQuotaProductActive: true,
+            performInitialProviderDetection: false)
+
+        for provider in [UsageProvider.kimi, .zai] {
+            let metadata = ProviderDescriptorRegistry.descriptor(for: provider).metadata
+            #expect(restarted.providerConfig(for: provider)?.enabled == true)
+            #expect(restarted.isProviderEnabled(provider: provider, metadata: metadata))
+        }
+        let enabledProviders = restarted.enabledProvidersOrdered(
+            metadataByProvider: ProviderDescriptorRegistry.metadata)
+        #expect(enabledProviders.contains(.kimi))
+        #expect(enabledProviders.contains(.zai))
+    }
+
+    @Test
     func `overview membership is added once and removed with credential deletion`() throws {
         let suiteName = "AIQuotaProviderActivationTests-overview-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
@@ -140,10 +180,38 @@ struct AIQuotaProviderActivationTests {
         settings.setAIQuotaProviderValidated(.kimi, validated: true)
         settings.kimiUsageDataSource = .api
         #expect(!settings.isAIQuotaProviderValidated(.kimi))
+        settings.setAIQuotaProviderValidated(.kimi, validated: true)
+        settings.kimiUsageDataSource = .api
+        #expect(settings.isAIQuotaProviderValidated(.kimi))
 
         settings.setAIQuotaProviderValidated(.minimax, validated: true)
         settings.minimaxCookieSource = .manual
         #expect(!settings.isAIQuotaProviderValidated(.minimax))
+        settings.setAIQuotaProviderValidated(.minimax, validated: true)
+        settings.minimaxCookieSource = .manual
+        #expect(settings.isAIQuotaProviderValidated(.minimax))
+    }
+
+    @Test
+    func `changing a validated credential disables the persisted monitor selection`() throws {
+        let suiteName = "AIQuotaProviderActivationTests-credential-disable-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = SettingsStore(
+            userDefaults: defaults,
+            configStore: testConfigStore(suiteName: suiteName),
+            aiQuotaCredentialStore: InMemoryAIQuotaCredentialStore(),
+            aiQuotaProductActive: true,
+            performInitialProviderDetection: false)
+        let metadata = ProviderDescriptorRegistry.descriptor(for: .zai).metadata
+        settings.setAIQuotaProviderValidated(.zai, validated: true)
+        settings.setProviderEnabled(provider: .zai, metadata: metadata, enabled: true)
+
+        try settings.setAIQuotaCredential("replacement", for: .glmAPIKey, provider: .zai)
+
+        #expect(settings.providerConfig(for: .zai)?.enabled == false)
+        #expect(!settings.isProviderEnabled(provider: .zai, metadata: metadata))
     }
 
     @Test

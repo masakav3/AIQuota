@@ -5,6 +5,7 @@ extension SettingsStore {
     var kimiUsageDataSource: ProviderSourceMode {
         get { self.configSnapshot.providerConfig(for: .kimi)?.source ?? .auto }
         set {
+            guard newValue != self.kimiUsageDataSource else { return }
             let source: ProviderSourceMode? = switch newValue {
             case .auto: .auto
             case .api: .api
@@ -70,6 +71,7 @@ extension SettingsStore {
     var kimiCookieSource: ProviderCookieSource {
         get { self.resolvedCookieSource(provider: .kimi, fallback: .auto) }
         set {
+            guard newValue != self.kimiCookieSource else { return }
             self.updateProviderConfig(provider: .kimi) { entry in
                 entry.cookieSource = newValue
             }
